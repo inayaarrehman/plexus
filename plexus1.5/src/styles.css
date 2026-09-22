@@ -1,0 +1,2905 @@
+/* ---------------------------------------------------------------------
+   PLEXUS — visual identity. A plexus is an interconnected network: the
+   product is built around nodes + connections, not medical clichés.
+   Colour is architectural here, not decorative trim. Each major screen
+   is its own "Plexus environment" — a full-bleed background colour drawn
+   from ONE palette (periwinkle home, apricot Daily board, seafoam
+   Systems, cobalt 3-Minute, plum Review) so moving through the app feels
+   like walking between rooms of the same building rather than dropping
+   onto a white page. The four brand colours — coral/aqua/cobalt/plum —
+   also serve as the four difficulty tiers and the four nodes of the
+   Plexus mark. "Plexus Ink" (--text) is a single deep navy used as the
+   primary text colour across every environment, which is what keeps the
+   different backgrounds reading as one product.
+   --------------------------------------------------------------------- */
+:root {
+  --bg: #faf9f6;
+  --bg-elevated: #ffffff;
+  --border: #e2e0da;
+  /* Plexus Ink — a deep navy rather than pure black. Contrast-checked at
+     10:1+ against every light Plexus environment (periwinkle/apricot/
+     seafoam/plum) and 16.8:1 on white, so one text colour works
+     everywhere and ties the environments together. */
+  --text: #1b1c2e;
+  --text-dim: #6b6960;
+  --accent: #1f6f5c;
+  --accent-ink: #ffffff;
+  --radius: 8px;
+
+  /* The five Plexus environment canvases (see the env-* body classes
+     toggled in App.jsx). Each is a confident, full-viewport colour — not
+     a barely-tinted white. Per-environment --text-dim/--border are tuned
+     inside each env block below so dim text and thin rules stay legible
+     on the colour (the neutral defaults are too low-contrast on them). */
+  --bg-home: #d3c8f8;      /* periwinkle / iris — Today / Daily home */
+  --bg-daily: #f6ddc9;     /* soft apricot — the Daily puzzle board */
+  --bg-systems: #cfe9e2;   /* seafoam / aqua — the Systems library */
+  --bg-review: #e7d8ee;    /* soft plum / orchid — Review */
+  --bg-challenge: #1c2a63; /* deep cobalt — the 3-Minute Challenge */
+  --home-text-dim: #4a4658;
+  --home-divider: rgba(27, 28, 46, 0.14);
+
+  /* Original 4-tier difficulty / brand palette — coral/aqua/cobalt/plum,
+     not NYT's yellow/green/blue/purple. These exact hexes are kept in
+     sync with src/data/constants.js's DIFFICULTY.color (used for
+     Strand fills/nodes, the brand mark, and result-square fills via
+     inline style) — both are contrast-checked at 4.5:1+ against the
+     fixed white text/glyph shown on top of them. */
+  --difficulty-easy: #bb4c34;
+  --difficulty-medium: #0f7a76;
+  --difficulty-hard: #3568c4;
+  --difficulty-expert: #8c4fc2;
+  --difficulty-easy-ink: #fff6f3;
+  --difficulty-medium-ink: #eefdfc;
+  --difficulty-hard-ink: #f3f7ff;
+  --difficulty-expert-ink: #faf3ff;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17160f;
+    --bg-elevated: #201e15;
+    --border: #35331f;
+    --text: #f3f1e9;
+    --text-dim: #9a9686;
+    --accent: #4fb99e;
+    --accent-ink: #0e2620;
+    color-scheme: dark;
+
+    /* Deep, muted versions of each environment for dark mode — still
+       recognizably "the same room," just at dark-mode depth. Challenge
+       stays cobalt (it is intentionally dark in both themes). */
+    --bg-home: #251f47;
+    --bg-daily: #2b2018;
+    --bg-systems: #14302b;
+    --bg-review: #2a2036;
+    --home-text-dim: #b8b0d8;
+    --home-divider: rgba(255, 255, 255, 0.14);
+
+    /* Lighter tints for the few places a difficulty color is used as TEXT
+       on the page background (labels, sub-headings) rather than as a
+       solid fill with fixed white text — the darker light-mode hexes
+       above don't clear 4.5:1 against the dark background, these do. */
+    --difficulty-easy: #f0836a;
+    --difficulty-medium: #4fd6cd;
+    --difficulty-hard: #7ea6ee;
+    --difficulty-expert: #c491ea;
+  }
+}
+
+/* Visible keyboard focus everywhere — never suppressed. A 2px accent
+   outline with an offset so it stays legible against every difficulty
+   color, both themes, and small touch targets. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Respect the OS-level "reduce motion" preference: every gameplay/
+   celebration animation in this file (pop-in, shake, brand-mark, confetti)
+   is disabled rather than merely shortened, per the accessibility
+   requirement — the game stays fully playable with zero animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 18px 18px 60px;
+  min-height: 100vh;
+}
+
+/* ---------- Plexus environments ----------
+   One full-bleed background colour per major screen, applied to <body>
+   (see App.jsx) so it fills the whole viewport rather than stopping at
+   the centred app-shell column — no inset white container, on mobile
+   especially. Content sits directly on the colour; hierarchy comes from
+   typography, spacing and thin rules, not stacks of white cards. Each
+   environment re-tunes --text-dim and --border so dim text and dividers
+   stay legible on its colour; Plexus Ink (--text) is left alone so it
+   stays the shared primary text colour across every room. The dark-mode
+   blocks restore light dim/border values for the deep canvases. The
+   transition makes navigation between environments settle in softly
+   rather than snap (respecting reduced-motion via the global rule). */
+body {
+  transition: background-color 0.2s ease;
+}
+
+body.env-daily {
+  background: var(--bg-daily);
+  --text-dim: #6e4d3c;
+  --border: rgba(27, 28, 46, 0.16);
+}
+
+body.env-systems {
+  background: var(--bg-systems);
+  --text-dim: #37655c;
+  --border: rgba(27, 28, 46, 0.16);
+}
+
+body.env-review {
+  background: var(--bg-review);
+  --text-dim: #574364;
+  --border: rgba(27, 28, 46, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.env-daily,
+  body.env-systems,
+  body.env-review {
+    --text-dim: #9a9686;
+    --border: #35331f;
+  }
+  body.env-daily { background: var(--bg-daily); }
+  body.env-systems { background: var(--bg-systems); }
+  body.env-review { background: var(--bg-review); }
+}
+
+/* Comfortable one-handed tap targets everywhere. */
+button {
+  min-height: 40px;
+  font-family: inherit;
+}
+
+/* ---------- Primary navigation ---------- */
+
+/* Branch navigation (Sections 8–9): the destinations sit as nodes on one
+   thin connecting path — ● Today ─ ● Systems ─ ● 3-Minute ─ ● Review —
+   rather than plain tabs. The path is a single faint line (currentColor,
+   so it adapts to every environment); each item carries a node on it. The
+   active destination is shown by a larger, FILLED node AND a heavier label,
+   never by colour alone, so it stays clear for colour-blind users and in
+   every environment. Tap targets stay full-height and labels stay legible;
+   the line/node treatment is secondary to usability. */
+/* Branch navigation (Sections 1–3): the four destinations read first as
+   labels — Today · Systems · 3-Minute · Review — and only secondarily as
+   nodes on one connecting path. The path runs from the first node to the
+   last (not edge-to-edge) so it feels intentional; each node is small
+   "punctuation" that sits ON the path with clear air between it and the
+   label above. The active state is a filled teal node (slightly larger) AND
+   a heavier label — never colour alone. */
+.app-nav {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+}
+
+/* The connecting path — inset to roughly the first/last node centres so it
+   reads as linking the destinations, not underlining the whole bar. */
+.app-nav::before {
+  content: '';
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  bottom: 6px;
+  height: 1px;
+  background: var(--text);
+  opacity: 0.14;
+}
+
+.app-nav-item {
+  position: relative;
+  flex: 1 1 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 6px 6px 0;
+  cursor: pointer;
+  min-height: 44px;
+  text-align: center;
+}
+
+/* Small, restrained hollow node — punctuation, not a control. Sits low on
+   the path with breathing room below the label. */
+.app-nav-item::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--text-dim);
+  background: transparent;
+  opacity: 0.5;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.app-nav-item.active {
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Active node: filled teal, a touch larger, fully opaque. */
+.app-nav-item.active::after {
+  width: 7px;
+  height: 7px;
+  bottom: 2px;
+  background: var(--difficulty-medium);
+  border-color: var(--difficulty-medium);
+  opacity: 1;
+}
+
+.app-nav-item:hover {
+  color: var(--text);
+}
+
+.app-nav-item:hover::after {
+  opacity: 0.85;
+}
+
+@media (max-width: 380px) {
+  .app-nav-item {
+    padding: 6px 4px 0;
+    font-size: 0.8rem;
+  }
+}
+
+/* ---------- Home ---------- */
+
+/* The homepage's signature canvas. Applied to <body> (see App.jsx) so the
+   color bleeds to the full viewport rather than stopping at the centered
+   app-shell column — the point is "this page has color," not a tinted
+   card floating on white. Sections below live directly on this color:
+   typography, spacing and thin rules establish hierarchy, not white
+   card surfaces (a few small flat-color blocks are the exception, not
+   the pattern). */
+body.bg-home {
+  background: var(--bg-home);
+  transition: background 0.25s ease;
+}
+
+/* The nav bar sits directly on the periwinkle canvas on the homepage (no
+   card behind it) — its ordinary neutral gray divider/dim-text colors
+   are too low-contrast there, so use the home-specific tuned colors. */
+body.bg-home .app-nav {
+  border-bottom-color: var(--home-divider);
+}
+
+body.bg-home .app-nav-item {
+  color: var(--home-text-dim);
+}
+
+body.bg-home .app-nav-item.active,
+body.bg-home .app-nav-item:hover {
+  color: var(--text);
+}
+
+/* .secondary-btn's ordinary neutral-gray border all but disappears
+   against the periwinkle canvas — darken it here specifically. */
+body.bg-home .secondary-btn {
+  border-color: rgba(23, 22, 15, 0.28);
+}
+
+body.bg-home .secondary-btn:hover {
+  border-color: var(--text);
+}
+
+.home {
+  position: relative;
+  z-index: 1;
+}
+
+/* One restrained background device (Section 7): an oversized, extremely
+   low-opacity brand mark bleeding off the top-right corner of the hero.
+   Purely decorative, sits behind all content, ignored by assistive tech,
+   and disabled entirely under reduced-motion/print by simply never
+   animating — it's static. */
+/* Layering rule for decorative Plexus graphics (nav path, branch dividers,
+   the Monthly network): they are always aria-hidden, pointer-events:none,
+   and sit BEHIND content (content lives in positioned, z-indexed sections
+   above them). No decorative graphic is absolutely positioned over the hero
+   text column — that was what let the old ambient network's nodes overlap
+   the wordmark/topbar, so it was removed rather than merely restacked. */
+.plexus-divider,
+.plexus-line,
+.monthly-network {
+  pointer-events: none;
+}
+
+.home-topbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.home-topbar-link {
+  padding: 6px 0;
+  font-size: 0.82rem;
+}
+
+/* Higher specificity than the later, more general .text-link rule (which
+   would otherwise win the cascade and override this with --text-dim). */
+.home .home-topbar-link {
+  color: var(--home-text-dim);
+}
+
+.home-section {
+  position: relative;
+  z-index: 1;
+  padding: 22px 0;
+}
+
+.home-section + .home-section {
+  border-top: 1px solid var(--home-divider);
+}
+
+.home-hero-section {
+  padding-top: 8px;
+  /* Clips the ambient network where it bleeds off the right/bottom edge, and
+     is the positioning context for it + the recap popover. */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient network: anchored to the hero's lower-right, its nodes clustered
+   to the right so the empty left of the SVG can sit harmlessly over text.
+   Faint and behind everything; never intercepts taps. */
+.hero-network {
+  position: absolute;
+  right: -28px;
+  bottom: -18px;
+  width: 200px;
+  height: 160px;
+  color: var(--text);
+  opacity: 0.13;
+  z-index: 0;
+}
+
+@media (max-width: 400px) {
+  .hero-network {
+    width: 168px;
+    height: 140px;
+    right: -34px;
+    opacity: 0.11;
+  }
+}
+
+/* Everything in the hero sits above the ambient network. */
+.home-hero-section > *:not(.hero-network) {
+  position: relative;
+  z-index: 1;
+}
+
+.home-wordmark-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+
+/* The logo becomes a subtle button only after today's Daily is solved. */
+.home-logo-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  cursor: pointer;
+  line-height: 0;
+  border-radius: 8px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.home-logo-btn:hover {
+  transform: scale(1.06);
+}
+
+.home-logo-btn:active {
+  transform: scale(0.94);
+  opacity: 0.85;
+}
+
+.home-wordmark-row .brand-mark {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+/* The PLEXUS wordmark: set uppercase with confident letter-spacing so the
+   name itself becomes the recognizable mark. Text stays "Plexus" for
+   screen readers; the display treatment is purely CSS. */
+.home-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin: 0;
+}
+
+@media (max-width: 380px) {
+  .home-title {
+    font-size: 1.6rem;
+    letter-spacing: 0.12em;
+  }
+}
+
+/* The hero now leads with the wordmark, then the Daily line, then the CTA —
+   no tagline. This bottom margin is what sets the confident gap before the
+   Play button now that the tagline (which used to hold that space) is gone,
+   so the top reads intentional rather than empty. */
+.home-meta {
+  color: var(--home-text-dim);
+  font-size: 0.9rem;
+  margin: 6px 0 22px;
+}
+
+.home-meta .home-daily-number {
+  color: var(--difficulty-expert);
+  font-weight: 700;
+}
+
+.home-done-line {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.home-done-line .home-streak-count {
+  color: var(--difficulty-easy);
+  font-weight: 700;
+}
+
+/* An original, confident flat CTA for the Daily Puzzle — the visual
+   anchor of the homepage. Deliberately not a gradient/glowing/pill
+   button: one flat brand color, an arrow instead of an icon, generous
+   tap target. */
+.play-today-btn {
+  background: var(--difficulty-easy);
+  color: #fff6f3;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.12s ease;
+}
+
+.play-today-btn:hover {
+  opacity: 0.92;
+}
+
+.play-today-btn:active {
+  transform: scale(0.97);
+}
+
+.play-today-btn-arrow {
+  margin-left: 8px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.play-today-btn:hover .play-today-btn-arrow {
+  transform: translateX(3px);
+}
+
+/* Section headings are now real headings, not tracked all-caps document
+   labels with a coloured bullet — typography carries them (Sections 10, 11,
+   13). No decorative dot; the dot motif is reserved for the logo, the nav
+   path, and actual puzzle/Strand structure. */
+.home-section-heading {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.home-row-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.home-row-sub {
+  color: var(--home-text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+/* Higher specificity than the later .text-link rule, which would
+   otherwise win the cascade and override this back to --text-dim. */
+.home .home-link {
+  padding: 0;
+  text-align: left;
+  color: var(--text);
+}
+
+.home-link-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--difficulty-hard);
+  font-weight: 700;
+  transition: transform 0.15s ease;
+}
+
+.home-link:hover .home-link-arrow {
+  transform: translateX(3px);
+}
+
+.home-challenge-arrow {
+  color: var(--difficulty-medium);
+}
+
+/* ---------- Archive / Review ---------- */
+
+.section-sub {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin: 0 0 16px;
+}
+
+.archive-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.archive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 14px 2px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.archive-row:hover {
+  color: var(--accent);
+}
+
+.archive-row-done {
+  opacity: 0.9;
+}
+
+.archive-row-date {
+  font-weight: 600;
+}
+
+.archive-row-status {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.archive-row-status.won {
+  color: var(--difficulty-medium);
+}
+
+.archive-row-status.lost {
+  color: var(--difficulty-easy);
+}
+
+.archive-row-status.not-played {
+  color: var(--accent);
+}
+
+/* ---------- Systems Library ---------- */
+
+.mini-progress-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+  min-width: 40px;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: var(--text-dim);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Plexus node-chain progress (Section 18): ●—●—○—○—○. Solved nodes and
+   the links between two solved nodes light up in the system's accent
+   colour; the rest stay as faint outline nodes. */
+.node-progress {
+  display: flex;
+  align-items: center;
+  min-width: 40px;
+}
+
+.node-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1.5px solid var(--text-dim);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.node-dot.is-on {
+  background: var(--node-fill, var(--difficulty-medium));
+  border-color: var(--node-fill, var(--difficulty-medium));
+}
+
+.node-link {
+  flex: 1;
+  height: 2px;
+  min-width: 6px;
+  background: var(--border);
+  transition: background 0.3s ease;
+}
+
+.node-link.is-on {
+  background: var(--node-fill, var(--difficulty-medium));
+}
+
+.system-compact-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.system-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 44px;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 14px 2px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.94rem;
+  min-height: 48px;
+}
+
+.system-row:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.system-row:disabled {
+  cursor: default;
+}
+
+.system-row-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* One subtle per-system accent dot (Section 11), cycling through the same
+   four brand colors rather than a unique hue per system. */
+.system-row-name::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--row-accent, var(--text-dim));
+  flex-shrink: 0;
+}
+
+.system-row-empty .system-row-name::before {
+  opacity: 0.4;
+}
+
+.system-row-count {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.system-row-soon {
+  grid-column: 2 / span 2;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.system-row-empty {
+  opacity: 0.5;
+}
+
+.system-detail {
+  padding: 8px 0 24px;
+}
+
+.system-detail-accent {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+.system-detail-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.system-detail-count {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin: 0 0 10px;
+}
+
+.system-detail .mini-progress-track {
+  height: 4px;
+  margin-bottom: 18px;
+}
+
+.system-play-btn {
+  padding: 12px 28px;
+}
+
+.system-play-notice {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  max-width: 320px;
+  margin: 0 0 10px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+.your-system {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
+.your-system-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.your-system-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.your-system-label.strong {
+  color: var(--difficulty-medium);
+}
+
+.your-system-label.needs-work {
+  color: var(--difficulty-hard);
+}
+
+.your-system-values {
+  font-size: 0.9rem;
+}
+
+/* ---------- Conceptual territories (system detail) ---------- */
+
+.system-territories {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 4px;
+}
+
+.territories-sub {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  margin: 0 0 10px;
+}
+
+.territory-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* Not-yet-encountered territories are quiet outlines; encountered ones
+   fill with the system's accent dot. Never locked, never a level. */
+.territory-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.territory-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--row-accent, var(--text-dim));
+  background: transparent;
+}
+
+.territory-chip.is-encountered {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--row-accent, var(--text-dim)) 45%, var(--border));
+}
+
+.territory-chip.is-encountered::before {
+  background: var(--row-accent, var(--text-dim));
+}
+
+.territory-count {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dev Viewer (hidden #dev route; not user-facing) ---------- */
+
+.dev-viewer {
+  max-width: 960px;
+}
+
+.dev-heading {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+}
+
+.dev-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.dev-tab {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dev-tab.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.dev-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dev-filters select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.bank-difficulty-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(31, 111, 92, 0.12);
+  color: var(--accent);
+}
+
+.dev-category-sub {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  margin: -2px 0 8px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.dev-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+@media (max-width: 720px) {
+  .dev-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dev-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.dev-list-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.dev-list-row.active {
+  border-color: var(--accent);
+}
+
+.dev-list-title {
+  color: var(--text-dim);
+  font-size: 0.76rem;
+}
+
+.dev-main {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.dev-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.dev-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-dim);
+}
+
+.dev-status-draft {
+  background: rgba(198, 90, 65, 0.16);
+  color: var(--difficulty-easy);
+}
+
+.dev-status-needs_review {
+  background: rgba(181, 121, 10, 0.16);
+  color: #9a6a08;
+}
+
+.dev-status-reviewed {
+  background: rgba(181, 121, 10, 0.16);
+  color: #9a6a08;
+}
+
+.dev-status-published,
+.dev-status-verified {
+  background: rgba(47, 128, 104, 0.16);
+  color: var(--difficulty-medium);
+}
+
+.dev-status-rejected {
+  background: rgba(198, 90, 65, 0.16);
+  color: var(--difficulty-easy);
+}
+
+.dev-errors {
+  background: rgba(198, 90, 65, 0.08);
+  border: 1px solid rgba(198, 90, 65, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+
+.dev-errors ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.dev-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dev-category {
+  border-left: 4px solid var(--border);
+  padding-left: 12px;
+}
+
+.dev-category-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.dev-json-input {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
+.dev-parse-error {
+  color: var(--difficulty-easy);
+  font-size: 0.85rem;
+}
+
+/* ---------- Buttons ---------- */
+
+.primary-btn {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 22px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+}
+
+.primary-btn:hover {
+  opacity: 0.85;
+}
+
+.primary-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 11px 18px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  border-color: var(--text);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.icon-btn.ghost {
+  border: 1px solid var(--border);
+}
+
+.icon-btn:hover {
+  background: rgba(23, 22, 15, 0.05);
+}
+
+.icon-btn:active,
+.primary-btn:active,
+.secondary-btn:active {
+  transform: scale(0.97);
+}
+
+.text-link {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.text-link:hover {
+  color: var(--accent);
+}
+
+/* ---------- Game header ---------- */
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 10px;
+}
+
+/* On a narrow phone, a long header label (e.g. "Biochemistry/Genetics")
+   must never push the back button or mistakes dots off-screen and cause
+   horizontal scroll — min-width: 0 lets this flex child actually shrink,
+   with the label itself ellipsizing instead of wrapping/overflowing. */
+.game-header-title {
+  font-weight: 600;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.game-header .icon-btn {
+  flex-shrink: 0;
+}
+
+.mistakes-indicator {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-live {
+  background: var(--text);
+}
+
+.dot-spent {
+  background: var(--border);
+}
+
+.toast {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  text-align: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  width: fit-content;
+  margin: 0 auto 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(23, 22, 15, 0.06);
+  animation: fadeInDown 0.2s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Daily identity strip: the deterministic Puzzle Signature + label, above
+   the board. The signature is loose while unsolved and connected once won,
+   telling the unconnected→connected story in place. */
+.daily-id-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 12px;
+}
+
+.daily-id-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.puzzle-signature {
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+.puzzle-signature .sig-link {
+  transition: opacity 0.3s ease;
+}
+
+.puzzle-signature.is-animate .sig-link {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: sigDraw 0.5s ease 0.15s forwards;
+}
+
+@keyframes sigDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* One restrained empty-state line on a fresh board (Section 13). */
+.board-hint {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+/* ---------- Plexus Strands (solved categories) ----------
+   A solved category is not a coloured bar — it's a Strand: the category
+   name over four concept-nodes joined by one connecting path, in the
+   category's Plexus colour. It says "four separate concepts → one
+   relationship" at a glance, and is the most recognizable piece of the
+   board. The tinted surface + coloured edge mix the category colour
+   faintly into the surface (auto-adapting light/dark); the title stays in
+   high-contrast ink so it's always readable whatever colour it sits on,
+   and difficulty is carried by BOTH the colour AND the shape glyph in the
+   badge. */
+.strand-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.strand {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--strand-color);
+  background: color-mix(in srgb, var(--strand-color) 14%, var(--bg-elevated) 86%);
+  color: var(--text);
+  text-align: left;
+}
+
+.strand-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.strand-badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--strand-color);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.strand-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  min-width: 0;
+}
+
+/* The connecting path: four nodes in a row, each linked to the next by a
+   short coloured segment (●──●──●──●). Wraps gracefully; on a narrow phone
+   it becomes a readable 2×2 with the inline connectors dropped, so long
+   medical terms never get squeezed. */
+.strand-nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+}
+
+.strand-node {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.strand-node + .strand-node::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--strand-color);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.strand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--strand-color);
+  flex-shrink: 0;
+}
+
+.strand-term {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+@media (max-width: 520px) {
+  .strand-nodes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px 12px;
+  }
+  .strand-node + .strand-node::before {
+    display: none; /* colour + dots carry the "one strand" read on mobile */
+  }
+}
+
+/* Correct guess resolving into a Strand — the proposed connection settling
+   into place. Expert (plum) gets a slightly longer, softly glowing settle;
+   restrained, never confetti. */
+.strand.strand-form {
+  animation: strandForm 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.strand.strand-form-expert {
+  animation: strandFormExpert 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes strandForm {
+  0% { transform: translateY(4px) scale(0.97); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Strand pulse (Sections 10–12): when a correct group resolves into a
+   Strand, a single pulse travels node→node once (~0.5s total via the
+   stagger), then the Strand is completely still. It reads as "the
+   connection is established," not electricity/laser/loading. Only correct
+   guesses form a Strand, so only they ever pulse — incorrect / one-away /
+   duplicate never do, and because it plays on the already-revealed solved
+   Strand it can't leak which tiles were correct. Disabled under
+   prefers-reduced-motion by the global rule (the Strand simply rests). */
+.strand.strand-form .strand-node:nth-child(1) .strand-dot { animation: strandPulse 0.32s ease 0.02s 1; }
+.strand.strand-form .strand-node:nth-child(2) .strand-dot { animation: strandPulse 0.32s ease 0.10s 1; }
+.strand.strand-form .strand-node:nth-child(3) .strand-dot { animation: strandPulse 0.32s ease 0.18s 1; }
+.strand.strand-form .strand-node:nth-child(4) .strand-dot { animation: strandPulse 0.32s ease 0.26s 1; }
+
+@keyframes strandPulse {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+
+@keyframes strandFormExpert {
+  0% { transform: translateY(4px) scale(0.96); opacity: 0; box-shadow: 0 0 0 0 rgba(140, 79, 194, 0.45); }
+  55% { transform: scale(1.02); opacity: 1; box-shadow: 0 0 0 10px rgba(140, 79, 194, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(140, 79, 194, 0); }
+}
+
+/* ---------- Tile grid ---------- */
+
+/* The one place visual energy is allowed to live: a real 4x4 board, on
+   phones too — tiles shrink, the grid shape doesn't. Real elevation, a
+   press/compression animation, and an unmistakable selected state. */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 10px 0 18px;
+}
+
+@media (max-width: 420px) {
+  .tile-grid {
+    gap: 6px;
+  }
+}
+
+.tile {
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border);
+  border-top-width: 3px;
+  color: var(--text);
+  border-radius: 12px;
+  padding: 8px 6px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  /* Scales down for long medical terms (e.g. "Hypertrophic cardiomyopathy")
+     without ever shrinking so far it's hard to read — clamp() picks a
+     size proportional to the viewport within a readable floor/ceiling,
+     and wrapping (not truncation) handles the rest. */
+  font-size: clamp(0.72rem, 2.6vw, 0.92rem);
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  box-shadow: 0 1px 0 rgba(23, 22, 15, 0.04);
+  transition: transform 0.1s ease, background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* A very subtle geometry variation across the grid — alternating corner
+   radius — purely decorative texture, never information-bearing (which
+   tile is which category is never hinted at before it's solved). */
+.tile:nth-child(4n+1),
+.tile:nth-child(4n+4) {
+  border-radius: 14px;
+}
+.tile:nth-child(4n+2),
+.tile:nth-child(4n+3) {
+  border-radius: 10px;
+}
+
+@media (min-width: 421px) {
+  .tile {
+    font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+    padding: 14px 8px;
+    min-height: 80px;
+  }
+}
+
+.tile:hover {
+  border-color: var(--text-dim);
+  transform: translateY(-1px);
+}
+
+.tile:active {
+  transform: scale(0.95);
+}
+
+/* Selection is never color-only: an accent top border plus a small filled
+   dot in the corner accompany the inverted fill, so the state also reads
+   correctly if the invert itself is hard to distinguish. */
+.tile-selected {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--accent);
+  border-top-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(23, 22, 15, 0.16);
+  position: relative;
+}
+
+.tile-selected::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.tile-selected:active {
+  transform: scale(0.95);
+}
+
+.tile-shake {
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+
+/* Incorrect guess (Section 3): the proposed connection briefly breaks and
+   separates, then returns to the board — a quick outward nudge + drop
+   rather than a scold. Applied identically to all four selected tiles. */
+.tile-break {
+  animation: tileBreak 0.42s ease;
+}
+
+@keyframes tileBreak {
+  0% { transform: scale(1); }
+  35% { transform: translateY(2px) scale(0.94); }
+  60% { transform: translateY(0) scale(1.01); }
+  100% { transform: scale(1); }
+}
+
+/* "Proposing a connection" (Section 1): once two or more tiles are
+   selected, each selected tile exposes a slightly stronger node at its
+   corner — identical on every selected tile, so it expresses "these are
+   being linked" without ever hinting which selection is correct. */
+.tile-proposing::after {
+  width: 9px;
+  height: 9px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Microinteraction: once all 4 tiles for a guess are selected, they
+   subtly draw in toward one another (a few px, via a shared scale
+   rather than per-tile physics) — a small felt sense of "this is a
+   group" just before submitting. */
+.tile-grouped {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.tile-grouped:active {
+  transform: scale(0.95);
+}
+
+/* One Away feedback: a single synchronized pulse applied identically to
+   all 4 selected tiles — deliberately uniform so it can never single out
+   which 3 of the 4 actually belong together. */
+.tile-oneaway-pulse {
+  animation: oneAwayPulse 0.5s ease;
+}
+
+@keyframes oneAwayPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Result card ---------- */
+
+/* The completion screen is carried by the Plexus mark + typography, not a
+   big "success card": the surface is transparent so the result sits
+   directly in its environment (apricot for a Daily solve, seafoam for a
+   system one) rather than in a white box floating on the colour. */
+.result-card {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px 4px 8px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card h2 {
+  margin-top: 0;
+}
+
+.result-grid {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 14px;
+}
+
+.result-grid-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.result-square {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #fff;
+  line-height: 1;
+}
+
+.result-summary {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  margin: 0 0 6px;
+}
+
+.streak-banner {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  margin: 6px 0 14px;
+  font-weight: 600;
+}
+
+.streak-banner.milestone {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+/* ---------- Completion moment (brand mark + rotating phrase) ---------- */
+
+.result-brandmark {
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* The Plexus mark is drawn (elsewhere) as four coloured nodes joined by
+   paths around a central hub. Static by default. */
+.plexus-node,
+.plexus-path,
+.plexus-hub {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Completion moment (Sections 3 + 14): "the connections complete." The
+   four nodes arrive (a short stagger), THEN the paths draw themselves
+   between them, then the hub lights up — the network resolving into its
+   finished form. ~850ms, elegant rather than explosive: no confetti or
+   trophy. Fully disabled under prefers-reduced-motion by the global rule
+   in this file (which forces animation-duration to ~0, leaving the mark
+   simply present in its resolved state). */
+.brand-mark-assemble .plexus-node {
+  opacity: 0;
+  animation: plexusNodeIn 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+.brand-mark-assemble .plexus-node-1 { animation-delay: 0.05s; }
+.brand-mark-assemble .plexus-node-2 { animation-delay: 0.13s; }
+.brand-mark-assemble .plexus-node-3 { animation-delay: 0.21s; }
+.brand-mark-assemble .plexus-node-4 { animation-delay: 0.29s; }
+
+.brand-mark-assemble .plexus-path {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: plexusPathDraw 0.42s ease 0.42s forwards;
+}
+
+.brand-mark-assemble .plexus-hub {
+  opacity: 0;
+  animation: plexusHubIn 0.35s ease 0.78s forwards;
+}
+
+@keyframes plexusNodeIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  70% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes plexusPathDraw {
+  0% { stroke-dashoffset: 28; opacity: 0.5; }
+  100% { stroke-dashoffset: 0; opacity: 0.5; }
+}
+@keyframes plexusHubIn {
+  0% { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.completion-phrase {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 2px 0 10px;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  animation: completionPhraseIn 0.35s ease 0.85s forwards;
+}
+
+@keyframes completionPhraseIn {
+  0% { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.result-card-perfect .completion-phrase {
+  color: var(--accent);
+}
+
+/* Completed board (Section 4): once all four Strands are solved they draw
+   together and a single faint connective line runs down through their
+   badges — the four separate strands quietly reading as one network,
+   which then leads into the completion mark on the result card. Perceived,
+   not diagrammed; distinct from any confetti/trophy celebration. */
+.strand-stack-complete {
+  gap: 6px;
+  position: relative;
+}
+
+.strand-stack-complete::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 26px;
+  bottom: 26px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--text);
+  opacity: 0.14;
+}
+
+.daily-micro-stat {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: -4px 0 14px;
+}
+
+.connection-of-day {
+  margin-top: 12px;
+  padding-top: 8px;
+  text-align: left;
+}
+
+.connection-of-day-heading {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin: 0 0 6px;
+}
+
+.connection-of-day-title {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.connection-of-day-explanation {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ---------- Difficulty shape glyphs (never color alone) ---------- */
+
+.difficulty-shape {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+/* ---------- Knowledge signal ("Knew it" / "Review later") ---------- */
+
+.knowledge-signal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.knowledge-signal-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.chip-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.chip-btn-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ---------- Review / accordion ---------- */
+
+.review-panel {
+  margin-top: 20px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accordion-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-left: 4px solid transparent;
+  color: var(--text);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.accordion-level {
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.accordion-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.accordion-caret {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.accordion-body {
+  padding: 4px 16px 16px;
+}
+
+.accordion-explanation {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin: 0 0 10px;
+}
+
+.accordion-item-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accordion-item-list li {
+  font-size: 0.86rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accordion-item-list strong {
+  color: var(--text);
+}
+
+.accordion-item-list span {
+  color: var(--text-dim);
+}
+
+.remember-line {
+  background: rgba(31, 111, 92, 0.07);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.remember-label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+
+/* ---------- Follow the thread ---------- */
+
+.follow-thread-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--difficulty-hard);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.follow-thread-btn:hover {
+  border-color: var(--difficulty-hard);
+}
+
+.follow-thread-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.follow-thread-cta {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--difficulty-hard);
+}
+
+/* ---------- Thread view ---------- */
+
+.thread-systems {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--difficulty-hard);
+  margin: 0 0 4px;
+}
+
+.thread-lede {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.thread-group {
+  position: relative;
+}
+
+.thread-system-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.thread-node-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.thread-node-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: var(--difficulty-hard);
+}
+
+.thread-node-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.thread-node-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thread-node-title:disabled {
+  cursor: default;
+}
+
+.thread-node-caret {
+  flex-shrink: 0;
+  color: var(--difficulty-hard);
+  font-weight: 700;
+}
+
+.thread-node-detail {
+  padding: 2px 0 8px;
+}
+
+.thread-node-explanation {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin: 0 0 8px;
+}
+
+.thread-node-remember {
+  background: rgba(53, 104, 196, 0.08);
+  border-left: 3px solid var(--difficulty-hard);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.thread-node-remember .remember-label {
+  color: var(--difficulty-hard);
+}
+
+/* The vertical path linking one system group to the next. */
+.thread-connector {
+  width: 2px;
+  height: 16px;
+  margin: 2px 0 8px 4px;
+  background: var(--difficulty-hard);
+  opacity: 0.4;
+  border-radius: 2px;
+}
+
+/* ---------- Modal ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 9, 5, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 440px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.howto-list {
+  padding-left: 18px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #fff;
+}
+
+.pill-1 { background: var(--difficulty-easy); }
+.pill-4 { background: var(--difficulty-expert); }
+
+/* ---------- Stats ---------- */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.stat-box {
+  text-align: center;
+  padding: 10px 4px;
+  border-right: 1px solid var(--border);
+}
+
+.stat-box:last-child {
+  border-right: none;
+}
+
+.stat-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.stats-subhead {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+}
+
+.dist-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dist-row-label {
+  width: 14px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.dist-bar-track {
+  flex: 1;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dist-bar-fill {
+  background: var(--text-dim);
+  min-width: 20px;
+  padding: 4px 8px;
+  color: var(--bg);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+/* ---------- Confetti (Daily Puzzle win only) ---------- */
+
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  border-radius: 2px;
+  animation-name: fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+/* A restrained shape mix so it reads as confetti but feels like Plexus:
+   round "nodes" and short line segments among the rectangles. */
+.confetti-node {
+  border-radius: 50%;
+}
+
+.confetti-line {
+  border-radius: 2px;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(320px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* ---------- 3-Minute Challenge ---------- */
+
+.challenge {
+  display: flex;
+  flex-direction: column;
+}
+
+.challenge-intro,
+.challenge-results {
+  align-items: flex-start;
+  padding: 24px 0;
+}
+
+.challenge-title,
+.challenge-results-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.challenge-lede {
+  font-size: 1.05rem;
+  margin: 0 0 6px;
+}
+
+.challenge-mixes {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin: 0 0 16px;
+}
+
+.challenge-best {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 20px;
+}
+
+.challenge-start-btn {
+  margin-bottom: 16px;
+}
+
+/* The 3-Minute Challenge is the deepest Plexus environment (Section 5 +
+   19): cobalt in BOTH OS themes, across all three phases (intro,
+   playing, results). Plexus Ink is intentionally left as --text so the
+   white tiles' selected state (a dark fill) and the dark Submit-button
+   logic still work on the white tile surfaces; everything that must read
+   light directly on the cobalt canvas is set explicitly here. */
+body.env-challenge {
+  background: var(--bg-challenge);
+  color: #f2f1fb;
+  --text-dim: #c3bdec;
+  --border: rgba(255, 255, 255, 0.2);
+  --accent: #9db4ff;
+}
+
+/* Once a round is live, deepen the cobalt a touch — a felt "the game
+   takes over" focus shift. The surrounding nav is already removed by
+   App.jsx during play, so only timer / score / round / options remain. */
+body.bg-challenge-focus {
+  background: #16204a;
+}
+
+body.env-challenge .app-nav-item.active,
+body.env-challenge .app-nav-item:hover {
+  color: #f2f1fb;
+}
+
+body.env-challenge .challenge-header {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+body.env-challenge .challenge-anchor {
+  color: #f2f1fb;
+}
+
+body.env-challenge .challenge-choice {
+  color: #f2f1fb;
+}
+
+body.env-challenge .challenge-results-label {
+  color: #f2f1fb;
+}
+
+/* Force the dark-mode difficulty tints (built for text on a dark
+   background) regardless of OS theme, since this canvas is always dark. */
+body.env-challenge .challenge-choice.is-correct {
+  color: #4fd6cd;
+}
+
+body.env-challenge .challenge-choice.is-incorrect {
+  color: #f0836a;
+}
+
+body.env-challenge .challenge-timer.urgent {
+  color: #f0836a;
+}
+
+/* Buttons on cobalt: the default primary (dark ink fill) and the
+   ink-coloured secondary/link text all vanish against it — restyle for
+   the dark canvas. Start becomes a bright surface; secondary/link light. */
+body.env-challenge .primary-btn {
+  background: #eceaff;
+  color: #16204a;
+}
+
+body.env-challenge .secondary-btn {
+  color: #f2f1fb;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+body.env-challenge .secondary-btn:hover {
+  border-color: #f2f1fb;
+}
+
+.challenge-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.challenge-timer {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.challenge-timer.urgent {
+  font-size: 1.8rem;
+  color: var(--difficulty-easy);
+}
+
+.challenge-live-score {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.challenge-multiplier {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-left: 6px;
+}
+
+.challenge-anchor {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.challenge-prompt {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+}
+
+.challenge-tile-grid {
+  margin-top: 12px;
+}
+
+.challenge-submit-btn {
+  display: block;
+  margin: 4px auto 0;
+}
+
+.challenge-choice-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.challenge-choice {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+  padding: 14px 4px;
+  font-size: 0.98rem;
+  cursor: pointer;
+}
+
+.challenge-choice:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.challenge-choice:disabled {
+  cursor: default;
+}
+
+.challenge-choice.is-correct {
+  color: var(--difficulty-medium);
+  font-weight: 700;
+}
+
+.challenge-choice.is-incorrect {
+  color: var(--difficulty-easy);
+  text-decoration: line-through;
+}
+
+.challenge-shown {
+  margin-bottom: 6px;
+}
+
+.challenge-shown-item {
+  font-size: 1.02rem;
+  font-weight: 600;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.challenge-final-score {
+  font-size: 2.4rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.challenge-new-best {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.challenge-results-line {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  margin: 2px 0;
+}
+
+.challenge-results-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.challenge-results-actions {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 8px;
+  flex-wrap: wrap;
+}
+
+.challenge-review-misses {
+  width: 100%;
+  margin: 10px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.challenge-miss-item {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.challenge-miss-tag {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.challenge-miss-text {
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+
+.challenge-miss-explanation {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin: 0 0 4px;
+}
+
+.challenge-miss-note {
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  margin: 0;
+}
+
+/* ---------- Save this connection ---------- */
+
+.save-connection-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-connection-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.save-connection-btn.is-saved {
+  color: var(--difficulty-expert);
+  border-color: color-mix(in srgb, var(--difficulty-expert) 45%, var(--border));
+}
+
+.save-connection-mark {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* ---------- Monthly Plexus View ---------- */
+
+.monthly-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin: 6px 0 2px;
+}
+
+/* The month as a field: signatures on a fixed 7-column lattice, with the
+   sparse Plexus network drawn behind them. Fixed columns keep the network
+   geometry deterministic and resolution-independent. */
+.monthly-field {
+  position: relative;
+  margin: 16px 0 18px;
+}
+
+/* The deterministic peripheral network, stretched to the grid box and sitting
+   BEHIND the signatures at low opacity so dates stay readable (Section 19). */
+.monthly-network {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Signatures are the primary objects; date numbers are secondary. */
+.monthly-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px 6px;
+}
+
+.monthly-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+  border-radius: 10px;
+  cursor: pointer;
+  min-height: 68px;
+}
+
+.monthly-cell:disabled {
+  cursor: default;
+}
+
+.monthly-cell .puzzle-signature {
+  color: var(--text);
+}
+
+/* Completed = connected & full colour; quiet/future = faint outline. */
+.monthly-cell.is-quiet .puzzle-signature {
+  opacity: 0.34;
+}
+
+.monthly-cell.is-future .puzzle-signature {
+  opacity: 0.16;
+}
+
+.monthly-cell-day {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.monthly-cell.is-connected .monthly-cell-day {
+  color: var(--text);
+}
+
+/* Today: a subtle ring, never a red/streak warning. */
+.monthly-cell.is-today {
+  outline: 2px solid color-mix(in srgb, var(--difficulty-hard) 60%, transparent);
+  outline-offset: -2px;
+}
+
+.monthly-cell:hover:not(:disabled) .puzzle-signature {
+  opacity: 1;
+}
+
+.monthly-summary {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+/* ---------- Saved connections (in Review) ---------- */
+
+.saved-connections {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 20px;
+}
+
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saved-item {
+  border-left: 3px solid var(--difficulty-expert);
+  padding: 4px 0 4px 12px;
+}
+
+.saved-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.saved-item-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.saved-unsave {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--difficulty-expert);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  min-height: 32px;
+}
+
+.saved-item-terms {
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  margin: 2px 0 0;
+}
+
+.saved-item-remember {
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
+/* ---------- Dev: Daily Preview quality dimensions (internal) ---------- */
+.dev-quality-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.dev-dim {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Plexus branching divider (used sparingly) ---------- */
+.plexus-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  margin: 8px 0;
+}
+
+.plexus-divider-rule {
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.16;
+}
+
+.plexus-divider-mark {
+  flex-shrink: 0;
+}
+
+/* ---------- Solved-logo recap popover (post-Daily delight) ---------- */
+.recap-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 72px 16px 16px;
+  background: rgba(10, 9, 5, 0.28);
+}
+
+.recap-pop {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  box-shadow: 0 10px 34px rgba(23, 22, 15, 0.16);
+}
+
+.recap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.recap-head .brand-mark {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.recap-head-label {
+  flex: 1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.recap-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  min-height: 32px;
+}
+
+/* The four solved Strands as a vertical branch off the mark, joined by one
+   connecting line — readable at 390px, category titles alone by default. */
+.recap-strands {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.recap-strands::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--text);
+  opacity: 0.14;
+}
+
+.recap-strand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 2px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.recap-strand-node {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--strand-color);
+  flex-shrink: 0;
+}
+
+.recap-strand-title {
+  min-width: 0;
+}
+
+.recap-strand-terms {
+  margin: 0 0 8px 21px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
