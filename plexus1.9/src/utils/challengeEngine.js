@@ -102,18 +102,33 @@ function weightedCandidates(bank, anchor, { useTitles = false } = {}) {
   return candidates
 }
 
-// Picks `count` distractors, biased toward higher weight without being
-// fully deterministic (so the same anchor doesn't always pair with the
-// same wrong answers).
+// Picks `count` distractors, strongly preferring same-organ-system (and
+// same-connection-type) candidates so a wrong option is a genuine near-miss
+// the player must actually know medicine to rule out (NBME-style
+// discrimination), not an obviously-off item. Candidates are bucketed by
+// weight (highest = same system AND same type) and filled from the top bucket
+// down, shuffled within each bucket for variety; lower-weight (cross-system)
+// candidates are used only when the stronger buckets can't supply enough.
 function pickDistractors(bank, anchor, count, rng, opts) {
   const candidates = weightedCandidates(bank, anchor, opts)
   if (candidates.length === 0) return []
-  candidates.sort((a, b) => b.weight - a.weight)
-  const poolSize = Math.max(count * 4, 12)
-  const topSlice = candidates.slice(0, Math.min(poolSize, candidates.length))
-  return shuffleWith(topSlice, rng)
-    .slice(0, count)
-    .map((c) => c.text)
+  // Group by weight, descending.
+  const byWeight = new Map()
+  for (const c of candidates) {
+    if (!byWeight.has(c.weight)) byWeight.set(c.weight, [])
+    byWeight.get(c.weight).push(c)
+  }
+  const weightsDesc = [...byWeight.keys()].sort((a, b) => b - a)
+  const chosen = []
+  for (const w of weightsDesc) {
+    if (chosen.length >= count) break
+    const bucket = shuffleWith(byWeight.get(w), rng)
+    for (const c of bucket) {
+      if (chosen.length >= count) break
+      chosen.push(c.text)
+    }
+  }
+  return chosen.slice(0, count)
 }
 
 // ---------------------------------------------------------------------

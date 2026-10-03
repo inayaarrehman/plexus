@@ -28,7 +28,6 @@ export default function Game({
   dailyNumber,
   dailyStreak,
   dailyPerfectStreak = 0,
-  openBoard = false,
   challengeDayNumber = null,
   onExit,
   onFinish,
@@ -41,7 +40,6 @@ export default function Game({
       puzzleId: puzzle.id,
       tiles: buildTiles(puzzle),
       solvedCats: [],
-      foundCats: [],
       mistakes: 0,
       guessLog: [],
       gameOver: false,
@@ -57,10 +55,6 @@ export default function Game({
 
   const [tiles, setTiles] = useState(initial.tiles)
   const [solvedCats, setSolvedCats] = useState(initial.solvedCats)
-  // Open Board only: which categories have been correctly identified so far.
-  // Tracked internally to count progress and dedupe repeats — never rendered
-  // as which tiles/category, so the structure stays hidden until the end.
-  const [foundCats, setFoundCats] = useState(initial.foundCats || [])
   const [mistakes, setMistakes] = useState(initial.mistakes)
   const [guessLog, setGuessLog] = useState(initial.guessLog)
   const [gameOver, setGameOver] = useState(initial.gameOver)
@@ -89,13 +83,12 @@ export default function Game({
       puzzleId: puzzle.id,
       tiles,
       solvedCats,
-      foundCats,
       mistakes,
       guessLog,
       gameOver,
       won,
     })
-  }, [progressKey, puzzle.id, tiles, solvedCats, foundCats, mistakes, guessLog, gameOver, won])
+  }, [progressKey, puzzle.id, tiles, solvedCats, mistakes, guessLog, gameOver, won])
 
   useEffect(() => {
     if (gameOver && !finishReported.current && !alreadyOverAtLoad.current) {
@@ -112,10 +105,8 @@ export default function Game({
 
   useEffect(() => () => clearTimeout(msgTimer.current), [])
 
-  // In Open Board, all 16 stay in play until the board is fully resolved at
-  // the end; in normal play, solved categories are removed as they're found.
-  const remainingTiles =
-    openBoard && !gameOver ? tiles : tiles.filter((t) => !solvedCats.includes(t.catIndex))
+  // Solved categories are removed from the board as they're found.
+  const remainingTiles = tiles.filter((t) => !solvedCats.includes(t.catIndex))
 
   const toggleTile = (tile) => {
     if (gameOver) return
@@ -150,38 +141,6 @@ export default function Game({
 
     const levels = selected.map((t) => t.level).sort((a, b) => a - b)
     const catIndexes = selected.map((t) => t.catIndex)
-
-    // ---- Open Board: correct groups stay on the board (hidden) until all
-    // four have been found; only then does the whole board resolve. ----
-    if (openBoard && isFullMatch(selected)) {
-      const catIndex = selected[0].catIndex
-      if (foundCats.includes(catIndex)) {
-        setSelected([])
-        flashMessage('Already found')
-        return
-      }
-      setGuessLog((prev) => [
-        ...prev,
-        { levels: [selected[0].level, selected[0].level, selected[0].level, selected[0].level], catIndexes, correct: true, attemptKey: key },
-      ])
-      haptics.correct()
-      setSelected([])
-      const nextFound = [...foundCats, catIndex]
-      setFoundCats(nextFound)
-      if (nextFound.length === 4) {
-        setTimeout(() => {
-          haptics.complete()
-          setSolvedCats([0, 1, 2, 3]) // resolve the whole board at the end
-          setWon(true)
-          setGameOver(true)
-        }, 450)
-      } else {
-        const phrase = pickConnectionPhrase(lastMicroRef.current)
-        lastMicroRef.current = phrase
-        flashMessage(phrase, 900)
-      }
-      return
-    }
 
     if (isFullMatch(selected)) {
       const catIndex = selected[0].catIndex
@@ -338,14 +297,6 @@ export default function Game({
 
       {message && <div className="toast">{message}</div>}
 
-      {/* Open Board progress: how many of the four have been found, WITHOUT
-          revealing which. */}
-      {openBoard && !gameOver && (
-        <p className="open-board-progress">
-          <span className="open-board-count">{foundCats.length}</span> / 4 found
-        </p>
-      )}
-
       {/* The Daily's deterministic Puzzle Signature: loose nodes while the
           board is unsolved, its connected form once won — the puzzle's own
           tiny identity, transforming in place. Decorative only. */}
@@ -389,8 +340,8 @@ export default function Game({
 
       {!gameOver && (
         <>
-          {solvedCats.length === 0 && foundCats.length === 0 && selected.length === 0 && (
-            <p className="board-hint">{openBoard ? 'All sixteen stay in play — find all four.' : 'Find what connects.'}</p>
+          {solvedCats.length === 0 && selected.length === 0 && (
+            <p className="board-hint">Find what connects.</p>
           )}
           <div className="tile-grid">
             {remainingTiles.map((tile) => {

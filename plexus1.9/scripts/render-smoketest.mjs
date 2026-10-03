@@ -33,6 +33,7 @@ import Game from '../src/components/Game.jsx'
 import Archive from '../src/components/Archive.jsx'
 import Systems from '../src/components/Systems.jsx'
 import Challenge from '../src/components/Challenge.jsx'
+import Race from '../src/components/Race.jsx'
 import AppNav from '../src/components/AppNav.jsx'
 import DevViewer from '../src/components/DevViewer.jsx'
 import HowToModal from '../src/components/HowToModal.jsx'
@@ -558,30 +559,42 @@ check('StatsModal renders with populated stats', () =>
   )
 )
 
-check('Game Open Board keeps all tiles in play, shows hidden X/4 progress, and reveals no strands', () => {
+check('Game renders a standard Daily board (Open Board fully removed)', () => {
   const html = renderToStaticMarkup(
     React.createElement(Game, {
       puzzle: dailyPuzzles[0],
       isDaily: true,
-      openBoard: true,
-      progressKey: 'smoketest-openboard',
-      headerLabel: 'Daily #1 · Open Board',
+      progressKey: 'smoketest-daily-board',
+      headerLabel: 'Daily #1',
       resultTitle: "Today's Results",
       dailyNumber: 1,
       onExit: () => {},
       onFinish: () => {},
     })
   )
-  if (!html.includes('open-board-progress')) throw new Error('expected the hidden X/4 found progress')
-  if (!html.includes('/ 4 found')) throw new Error('expected the "/ 4 found" progress text')
-  if (html.includes('strand-title')) throw new Error('Open Board must not reveal solved strands mid-game')
-  if (!html.includes('stay in play')) throw new Error('expected the Open Board empty-state hint')
+  if (!html.includes('tile-grid')) throw new Error('expected the standard tile grid to render')
+  if (html.includes('open-board-progress') || html.includes('/ 4 found'))
+    throw new Error('Open Board UI must be fully removed')
+  if (html.includes('stay in play')) throw new Error('Open Board hint must be gone')
   return html
 })
 
 // ---------------------------------------------------------------
 // 3-Minute Challenge
 // ---------------------------------------------------------------
+
+check('Race renders the entry screen with create/join options', () => {
+  const html = renderToStaticMarkup(React.createElement(Race, { bank: connectionBank, onExit: () => {} }))
+  if (!html.includes('Create a race')) throw new Error('expected a Create a race action')
+  if (!html.includes('Race a friend through the same Plexus')) throw new Error('expected the Race lede')
+  return html
+})
+
+check('Race join link (#race=CODE) opens the join screen with the code prefilled', () => {
+  const html = renderToStaticMarkup(React.createElement(Race, { bank: connectionBank, initialCode: 'AB2D', onExit: () => {} }))
+  if (!html.includes('AB2D')) throw new Error('expected the prefilled join code')
+  return html
+})
 
 check('Challenge renders the pre-challenge intro screen (no timer running yet)', () => {
   const html = renderToStaticMarkup(React.createElement(Challenge, { bank: connectionBank, onExit: () => {} }))

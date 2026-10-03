@@ -46,6 +46,7 @@
 // ---------------------------------------------------------------------
 
 import migratedBankCategories from './migratedBankCategories.js'
+import connectionBankExtra from './connectionBankExtra.js'
 import { SYSTEMS } from './constants.js'
 
 export const CONNECTION_TYPES = [
@@ -1227,6 +1228,12 @@ const connectionBank = [
 // here. This is what gives the dynamic per-system assembler real depth
 // without retyping existing, verified content.
 connectionBank.push(...migratedBankCategories)
+
+// Expansion pack — additional verified connection groups authored to the
+// same schema (src/data/connectionBankExtra.js). Kept in its own file so new
+// medical content can be added continuously without touching this file or any
+// game logic; merged here into the single bank everything else imports.
+connectionBank.push(...connectionBankExtra)
 
 export default connectionBank
 

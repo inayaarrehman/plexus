@@ -17,10 +17,10 @@ export default function Home({
   challengeBest,
   dailiesCompleted = 0,
   onPlayDaily,
-  onOpenBoard,
   onOpenSystems,
   onContinueStudying,
   onStartChallenge,
+  onStartRace,
   onOpenStats,
   onOpenHowTo,
 }) {
@@ -103,20 +103,6 @@ export default function Home({
           </p>
         )}
 
-        {/* Open Board is only a resume affordance for an in-progress board;
-            removed entirely once today is complete (§1) — revisit via Review. */}
-        {onOpenBoard && !dailyDone && (
-          <div className="home-openboard">
-            <button className="text-link home-openboard-link" onClick={onOpenBoard}>
-              Open Board
-              <span className="home-link-arrow" aria-hidden="true">
-                &rarr;
-              </span>
-            </button>
-            <span className="home-openboard-hint">Solved connections stay in play until you&rsquo;ve found all four.</span>
-          </div>
-        )}
-
         {connectionOfDay && (
           <div className="home-cotd">
             <span className="home-cotd-label">Connection of the day</span>
@@ -145,6 +131,17 @@ export default function Home({
         {challengeBest > 0 && <p className="home-row-sub">Personal best: {challengeBest.toLocaleString()}</p>}
         <button className="text-link home-link" onClick={onStartChallenge}>
           Start
+          <span className="home-link-arrow" aria-hidden="true">
+            &rarr;
+          </span>
+        </button>
+      </section>
+
+      <section className="home-section">
+        <h2 className="home-section-heading">Race</h2>
+        <p className="home-row-sub">Race a friend through the same Plexus.</p>
+        <button className="text-link home-link" onClick={onStartRace}>
+          Start a race
           <span className="home-link-arrow" aria-hidden="true">
             &rarr;
           </span>

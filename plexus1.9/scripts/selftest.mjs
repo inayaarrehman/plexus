@@ -29,7 +29,14 @@ import {
   autoGeneratePuzzles,
   scoreCombo,
   assembleSystemPuzzle,
+  categoriesNearDuplicate,
+  comboUsable,
+  seededRng,
+  hashStringToSeed,
 } from '../src/utils/puzzleAssembler.js'
+import { generateRound as genChallengeRound } from '../src/utils/challengeEngine.js'
+import { buildRaceChallenge, makeJoinCode, isValidJoinCode, normalizeJoinCode, RACE_ROUND_TYPES } from '../src/utils/raceEngine.js'
+import connectionBankExtra from '../src/data/connectionBankExtra.js'
 import { dateKey, dayNumber, getDailyPuzzleIndex, buildTiles, isFullMatch, isOneAway, shuffle, attemptKey, isDuplicateAttempt, dateFromDayNumber } from '../src/utils/game.js'
 import { assessModes, validateRound as validateChallengeRound } from '../src/utils/challengeEngine.js'
 import { getDailyPuzzleForDate, isFutureDateKey } from '../src/utils/dailyPuzzle.js'
@@ -853,6 +860,98 @@ console.log('\n[24] Expanded 3-Minute mode gate + validity (verified content onl
       checked += 1
     }
   }
+}
+
+// ---------------------------------------------------------------
+console.log('\n[25] Content expansion — every new group is structurally valid')
+{
+  let bad = 0
+  for (const c of connectionBankExtra) {
+    const errs = validateBankCategory(c)
+    if (errs.length) {
+      bad += 1
+      assert(false, `extra category ${c.id} invalid`, errs.join('; '))
+    }
+  }
+  assert(bad === 0, `all ${connectionBankExtra.length} expansion groups valid`)
+  // No expansion title collides (case-insensitively) with a pre-existing one.
+  const norm = (s) => String(s).trim().toLowerCase()
+  const extraIds = new Set(connectionBankExtra.map((c) => c.id))
+  const existing = new Set(connectionBank.filter((c) => !extraIds.has(c.id)).map((c) => norm(c.title)))
+  const collide = connectionBankExtra.filter((c) => existing.has(norm(c.title)))
+  assert(collide.length === 0, 'no expansion title duplicates an existing group', collide.map((c) => c.title).join(', '))
+}
+
+console.log('\n[26] Generation guard — near-duplicate categories never share a puzzle')
+{
+  const dup1 = { title: 'Causes of X', tiles: ['a', 'b', 'c', 'd'], tags: ['t1', 't2'] }
+  const dup2 = { title: 'causes of x', tiles: ['e', 'f', 'g', 'h'], tags: ['x'] }
+  assert(categoriesNearDuplicate([dup1, dup2]), 'identical titles flagged as near-duplicate')
+  const shareTags1 = { title: 'One', tiles: ['a', 'b', 'c', 'd'], tags: ['shared1', 'shared2', 'z'] }
+  const shareTags2 = { title: 'Two', tiles: ['e', 'f', 'g', 'h'], tags: ['shared1', 'shared2'] }
+  assert(categoriesNearDuplicate([shareTags1, shareTags2]), '>=2 shared tags flagged as near-duplicate')
+  const fine1 = { title: 'One', tiles: ['a', 'b', 'c', 'd'], tags: ['p', 'q'] }
+  const fine2 = { title: 'Two', tiles: ['e', 'f', 'g', 'h'], tags: ['r', 's'] }
+  assert(!categoriesNearDuplicate([fine1, fine2]), 'distinct categories are not near-duplicates')
+  assert(comboUsable([fine1, fine2]), 'comboUsable true for distinct, tile-compatible categories')
+  // Every auto-generated puzzle is free of near-duplicate categories.
+  const gen = autoGeneratePuzzles(connectionBank, { count: 12, seed: 7 })
+  let clean = true
+  for (const p of gen) {
+    const cats = p.categories.map((c) => ({ title: c.title, tiles: c.items.map((i) => i.term), tags: c.tags }))
+    if (categoriesNearDuplicate(cats)) clean = false
+  }
+  assert(clean, 'no generated puzzle contains near-duplicate categories')
+}
+
+console.log('\n[27] Seeded reproducibility — same seed string → same sequence')
+{
+  const a = seededRng('plexus-seed-xyz')
+  const b = seededRng('plexus-seed-xyz')
+  const seqA = Array.from({ length: 5 }, () => a())
+  const seqB = Array.from({ length: 5 }, () => b())
+  assert(seqA.every((v, i) => v === seqB[i]), 'seededRng is reproducible for one seed string')
+  assert(hashStringToSeed('abc') === hashStringToSeed('abc'), 'hashStringToSeed is stable')
+  assert(hashStringToSeed('abc') !== hashStringToSeed('abd'), 'different strings → different seeds')
+}
+
+console.log('\n[28] Race Mode — seeded challenge is deterministic and renderable')
+{
+  const codeOk = isValidJoinCode(makeJoinCode())
+  assert(codeOk, 'makeJoinCode produces a valid join code')
+  assert(normalizeJoinCode('ab2d!!') === 'AB2D', 'normalizeJoinCode uppercases and strips')
+  const r1 = buildRaceChallenge(connectionBank, { code: 'MNPQ' })
+  const r2 = buildRaceChallenge(connectionBank, { code: 'MNPQ' })
+  const r3 = buildRaceChallenge(connectionBank, { code: 'RSTU' })
+  const sig = (r) => r.map((x) => `${x.type}:${x.categoryId || x.anchor || ''}`).join('|')
+  assert(r1.length === 10, 'race set has 10 rounds')
+  assert(sig(r1) === sig(r2), 'same code → identical race set (seeded)')
+  assert(sig(r1) !== sig(r3), 'different code → different race set')
+  assert(r1.every((x) => RACE_ROUND_TYPES.includes(x.type)), 'race rounds are all renderable single-screen types')
+}
+
+console.log('\n[29] 3-Minute distractors are strongly same-system (NBME-style)')
+{
+  let seed = 123
+  const rng = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  const byText = new Map()
+  for (const c of connectionBank.filter((c) => c.status === 'verified')) {
+    for (const t of c.tiles) if (!byText.has(t.toLowerCase())) byText.set(t.toLowerCase(), c.systems)
+  }
+  let same = 0
+  let total = 0
+  for (let i = 0; i < 40; i++) {
+    const r = genChallengeRound(connectionBank, { rng, roundTypes: ['rapidAssociation'] })
+    if (!r) continue
+    const anchor = connectionBank.find((c) => c.id === r.categoryId)
+    for (const o of r.options.filter((o) => !o.correct)) {
+      const sys = byText.get(o.text.toLowerCase())
+      if (!sys) continue
+      total += 1
+      if (sys.some((s) => anchor.systems.includes(s))) same += 1
+    }
+  }
+  assert(total > 0 && same / total >= 0.85, `>=85% of distractors share the anchor's system (got ${Math.round((100 * same) / total)}%)`)
 }
 
 // ---------------------------------------------------------------

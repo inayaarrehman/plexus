@@ -522,3 +522,39 @@ export function toggleSavedConnection(conn) {
   }
   return nowSaved
 }
+
+// ---------------------------------------------------------------------
+// Recently-served connection categories (repetition tracking)
+// ---------------------------------------------------------------------
+// A small rolling list of bank category ids served by the live Organ System
+// assembler, so repeated PLAY presses don't re-serve the same groups. Capped
+// so it stays a "recent" window, never an ever-growing exclusion list (which
+// would eventually starve small system pools).
+const RECENT_CATEGORIES_KEY = 'medconnections.recentCategories.v1'
+const RECENT_CATEGORIES_CAP = 24
+
+export function getRecentCategories() {
+  try {
+    const raw = localStorage.getItem(RECENT_CATEGORIES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+// Record the category ids just served (most-recent first), de-duplicated and
+// capped. Returns the new list.
+export function recordServedCategories(ids) {
+  const incoming = (Array.isArray(ids) ? ids : []).filter(Boolean)
+  if (incoming.length === 0) return getRecentCategories()
+  const prev = getRecentCategories()
+  const merged = [...incoming, ...prev.filter((id) => !incoming.includes(id))].slice(0, RECENT_CATEGORIES_CAP)
+  try {
+    localStorage.setItem(RECENT_CATEGORIES_KEY, JSON.stringify(merged))
+  } catch {
+    // ignore — best-effort
+  }
+  return merged
+}

@@ -5,6 +5,8 @@ import Game from './components/Game.jsx'
 import Archive from './components/Archive.jsx'
 import Systems from './components/Systems.jsx'
 import Challenge from './components/Challenge.jsx'
+import Race from './components/Race.jsx'
+import { raceCodeFromHash } from './utils/raceEngine.js'
 import AppNav from './components/AppNav.jsx'
 import HowToModal from './components/HowToModal.jsx'
 import StatsModal from './components/StatsModal.jsx'
@@ -28,6 +30,8 @@ import {
   getConceptMastery,
   recordConceptMastery,
   getChallengeStats,
+  getRecentCategories,
+  recordServedCategories,
 } from './utils/storage.js'
 
 // Builds Weak Spot data points from one finished attempt: every category
@@ -119,23 +123,36 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  const [view, setView] = useState('home') // 'home' | 'game' | 'archive' | 'systems' | 'challenge'
+  const [view, setView] = useState('home') // 'home' | 'game' | 'archive' | 'systems' | 'challenge' | 'race'
   const [gameCtx, setGameCtx] = useState(null)
   const [challengePhase, setChallengePhase] = useState('intro')
+  // A race join code carried in the URL hash (#race=CODE) drops a tapped
+  // invite link straight into Race Mode's join screen.
+  const [raceInitialCode, setRaceInitialCode] = useState('')
   const [showHowTo, setShowHowTo] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [stats, setStats] = useState(loadStats())
   const [refreshTick, setRefreshTick] = useState(0)
   const [systemPlayNotice, setSystemPlayNotice] = useState(null)
 
+  // On load, if the URL carries a Race invite (#race=CODE), open Race Mode's
+  // join screen with the code prefilled.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const code = raceCodeFromHash(window.location.hash)
+    if (code) {
+      setRaceInitialCode(code)
+      setView('race')
+    }
+  }, [])
+
   const today = new Date()
   const todayKey = dateKey(today)
   const todayDayNumber = dayNumber(today)
 
-  // Today's Daily is "done" once it has been completed in ANY mode (normal
-  // OR Open Board) — the source of truth is the per-date daily history, not
-  // one progress key, so Open Board and normal play share one Daily identity
-  // and neither double-counts the other.
+  // Today's Daily is "done" once it has been completed — the source of truth
+  // is the per-date daily history, not one progress key, so replaying never
+  // double-counts the day.
   const dailyDone = useMemo(() => {
     return !!getDailyHistory()[todayKey]?.completed
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,35 +251,15 @@ export default function App() {
     openArchiveDay(todayKey, puzzle, dailyDone)
   }
 
-  // Open Board: the same today's Daily, played in the advanced mode where
-  // solved connections stay on the board until all four are found. Uses a
-  // separate progress key so it never clobbers the normal daily's board, but
-  // the SAME Daily identity for completion (handleFinish de-dupes streak/
-  // history so replaying never double-counts).
-  const openDailyOpenBoard = () => {
-    const puzzle = getDailyPuzzleForDate(today)
-    if (!puzzle) return
-    setGameCtx({
-      puzzle,
-      mode: 'daily',
-      openBoard: true,
-      progressKey: `daily-${todayKey}-open`,
-      headerLabel: `Daily ${String(todayDayNumber).padStart(3, '0')} · Open Board`,
-      resultTitle: "Today's Results",
-      dailyNumber: puzzle.number,
-      dailyStreak: stats.currentStreak,
-      dateForHistory: todayKey,
-      challengeDayNumber: todayDayNumber,
-      isToday: true,
-    })
-    setView('game')
-  }
 
   // Assembles a fresh puzzle for a system on the spot (the Organ System
   // Library's PLAY button) — no pre-generated file, no numbered puzzle to
   // pick. Biased away from already-mastered concepts via `mastery`.
   const playSystem = (system) => {
-    const puzzle = assembleSystemPuzzle(connectionBank, system, { mastery })
+    const puzzle = assembleSystemPuzzle(connectionBank, system, {
+      mastery,
+      recentIds: getRecentCategories(),
+    })
     if (!puzzle) {
       // Organ-purity filtering (no fallback to unrelated categories) means
       // a thin system can genuinely have no eligible combination for some
@@ -271,6 +268,9 @@ export default function App() {
       return
     }
     setSystemPlayNotice(null)
+    // Remember the categories just served so the next PLAY leans toward fresh
+    // material (bounded recent window — see storage.recordServedCategories).
+    recordServedCategories(puzzle.categories.map((c) => c.bankCategoryId).filter(Boolean))
     setGameCtx({
       puzzle,
       mode: 'system',
@@ -300,9 +300,8 @@ export default function App() {
 
     if (mode === 'daily' || mode === 'archive') {
       // Count a Daily's completion (history + streak/stats) only the FIRST
-      // time that date is completed, in whichever mode. A later replay —
-      // Open Board after a normal solve, or vice versa — records nothing
-      // toward streak/history, so it can never double-count or inflate.
+      // time that date is completed. A later replay records nothing toward
+      // streak/history, so it can never double-count or inflate.
       const alreadyCompleted = !!getDailyHistory()[dateForHistory]?.completed
       if (!alreadyCompleted) {
         recordDailyHistory({
@@ -387,7 +386,6 @@ export default function App() {
           dailyNumber={gameCtx.dailyNumber}
           dailyStreak={gameCtx.isToday ? stats.currentStreak : 0}
           dailyPerfectStreak={gameCtx.isToday ? stats.currentPerfectStreak : 0}
-          openBoard={!!gameCtx.openBoard}
           challengeDayNumber={gameCtx.mode === 'system' ? null : gameCtx.challengeDayNumber}
           onExit={goHome}
           onFinish={handleFinish}
@@ -402,6 +400,14 @@ export default function App() {
       <div className="app-shell">
         {challengePhase !== 'playing' && <AppNav active="challenge" onNavigate={navigate} />}
         <Challenge bank={connectionBank} onExit={goHome} onPhaseChange={setChallengePhase} />
+      </div>
+    )
+  }
+
+  if (view === 'race') {
+    return (
+      <div className="app-shell">
+        <Race bank={connectionBank} initialCode={raceInitialCode} onExit={goHome} />
       </div>
     )
   }
@@ -444,10 +450,13 @@ export default function App() {
         challengeBest={challengeBest}
         dailiesCompleted={dailiesCompleted}
         onPlayDaily={openDailyToday}
-        onOpenBoard={openDailyOpenBoard}
         onOpenSystems={() => setView('systems')}
         onContinueStudying={handleContinueStudying}
         onStartChallenge={() => navigate('challenge')}
+        onStartRace={() => {
+          setRaceInitialCode('')
+          setView('race')
+        }}
         onOpenStats={() => setShowStats(true)}
         onOpenHowTo={() => setShowHowTo(true)}
       />

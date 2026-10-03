@@ -9,6 +9,7 @@ import {
   composeNextRound,
 } from '../utils/challengeEngine.js'
 import { getChallengeStats, recordChallengeResult, recordWeakSpots } from '../utils/storage.js'
+import { haptics } from '../utils/haptics.js'
 
 // The timed mode is 3 minutes (formerly 5). Kept as a single constant so
 // there are no other "five minute" assumptions hiding in the component.
@@ -35,6 +36,8 @@ function topEntry(counts) {
 export default function Challenge({ bank, onExit, onPhaseChange }) {
   const [phase, setPhase] = useState('intro') // 'intro' | 'playing' | 'results'
   const [activating, setActivating] = useState(false) // §16 intro network resolve
+  const [shake, setShake] = useState(false) // brief wrong-answer feedback
+  const shakeTimer = useRef(null)
   const [round, setRound] = useState(null)
   const [selected, setSelected] = useState([])
   const [feedback, setFeedback] = useState(null) // 'correct' | 'incorrect' | null
@@ -207,7 +210,10 @@ export default function Challenge({ bank, onExit, onPhaseChange }) {
     }
   })
 
-  useEffect(() => () => clearInterval(timerRef.current), [])
+  useEffect(() => () => {
+    clearInterval(timerRef.current)
+    clearTimeout(shakeTimer.current)
+  }, [])
 
   useEffect(() => {
     onPhaseChange?.(phase)
@@ -229,6 +235,23 @@ export default function Challenge({ bank, onExit, onPhaseChange }) {
     setComboStreak(0)
     recordMiss(tag, missText, explanation)
     bumpSystems(setSystemsMissed, systems)
+    // Immediate, tactile wrong-answer feedback — a quick shake + light haptic
+    // (haptics.incorrect no-ops on unsupported devices and under reduced
+    // motion). Kept brief so it never slows the fast pace of the round.
+    triggerWrongFeedback()
+  }
+
+  // Single chokepoint for the wrong-answer "feel": restart the shake animation
+  // (clearing any in-flight timer so rapid wrongs re-trigger it) and buzz.
+  const triggerWrongFeedback = () => {
+    haptics.incorrect()
+    clearTimeout(shakeTimer.current)
+    setShake(false)
+    // Next frame so the animation restarts even on back-to-back wrongs.
+    requestAnimationFrame(() => {
+      setShake(true)
+      shakeTimer.current = setTimeout(() => setShake(false), 340)
+    })
   }
 
   const handleToggle = (text, max = 4) => {
@@ -525,7 +548,7 @@ export default function Challenge({ bank, onExit, onPhaseChange }) {
   const multiplierDisplay = comboStreak >= 2 ? getMultiplier(comboStreak).toFixed(1) : null
 
   return (
-    <div className="challenge challenge-playing">
+    <div className={`challenge challenge-playing ${shake ? 'is-shake' : ''} ${feedback === 'incorrect' ? 'is-wrong' : ''}`}>
       <div className="challenge-header">
         <span className={`challenge-timer ${isUrgent ? 'urgent' : ''}`}>{formatTime(timeLeftMs)}</span>
         <span className="challenge-live-score">

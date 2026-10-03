@@ -39,6 +39,35 @@ export function categoriesCompatible(categories) {
   return true
 }
 
+// True if any TWO categories in the combo are so similar that putting them in
+// the same puzzle would feel repetitive or ambiguous — an identical (or
+// normalized-identical) title, or ≥2 shared defining tags. Tile-level
+// uniqueness (categoriesCompatible) already guarantees a single solution; this
+// is the additional "don't ship four back-to-back 'Causes of X' lists, and
+// don't pair near-synonymous groups" quality guard the product calls for.
+// Mirrors the mini-round near-synonym check in challengeEngine.validateRound.
+export function categoriesNearDuplicate(categories) {
+  const norm = (s) => String(s || '').trim().toLowerCase()
+  for (let i = 0; i < categories.length; i++) {
+    for (let j = i + 1; j < categories.length; j++) {
+      const a = categories[i]
+      const b = categories[j]
+      if (norm(a.title) === norm(b.title)) return true
+      const aTags = (a.tags || []).map(norm)
+      const bTags = new Set((b.tags || []).map(norm))
+      const shared = aTags.filter((t) => bTags.has(t)).length
+      if (shared >= 2) return true
+    }
+  }
+  return false
+}
+
+// A combo is usable in one puzzle only if its tiles are all distinct AND no
+// two categories are near-duplicates of each other.
+export function comboUsable(categories) {
+  return categoriesCompatible(categories) && !categoriesNearDuplicate(categories)
+}
+
 // Internal-only score for a full 4-category combo. Higher is better.
 // Rewards per-category quality plus DIVERSITY across the 4 categories —
 // connection-type variety and organ-system spread — which is what keeps
@@ -117,6 +146,25 @@ export function makeRng(seed) {
   }
 }
 
+// FNV-1a hash of a string → 32-bit unsigned seed, so a human-friendly seed
+// string (a Race join code, a date key, a system name) maps deterministically
+// to a numeric seed for makeRng. Same string → same seed → same sequence,
+// which is exactly what Race Mode needs to give two players one shared set.
+export function hashStringToSeed(str) {
+  let h = 2166136261 >>> 0
+  const s = String(str || 'plexus')
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+// Convenience: a seeded RNG straight from a seed string.
+export function seededRng(seedStr) {
+  return makeRng(hashStringToSeed(seedStr))
+}
+
 function shuffleWith(array, rng) {
   const arr = array.slice()
   for (let i = arr.length - 1; i > 0; i--) {
@@ -166,7 +214,7 @@ export function autoGeneratePuzzles(bank, { count, seed = 1, titlePrefix = 'Patt
         shuffleWith(available.hard, rng)[0],
         shuffleWith(available.expert, rng)[0],
       ]
-      if (!categoriesCompatible(combo)) continue
+      if (!comboUsable(combo)) continue
       const score = scoreCombo(combo)
       if (!best || score > best.score) best = { combo, score }
     }
@@ -235,13 +283,17 @@ function tierPools(bank, system) {
 }
 
 // Builds one fresh puzzle for a system, biased toward categories the
-// player hasn't mastered yet. `mastery` is the object from
-// storage.getConceptMastery(); pass {} for a player with no history.
-export function assembleSystemPuzzle(bank, system, { mastery = {}, rng = Math.random } = {}) {
+// player hasn't mastered yet AND away from ones served very recently (so
+// repeated PLAY presses don't re-serve the same material). `mastery` is the
+// object from storage.getConceptMastery(); `recentIds` is a list of bank
+// category ids served in the last few sessions (storage.getRecentCategories()).
+// Pass {} / [] for a player with no history.
+export function assembleSystemPuzzle(bank, system, { mastery = {}, rng = Math.random, recentIds = [] } = {}) {
   const pools = tierPools(bank, system)
   if (['easy', 'medium', 'hard', 'expert'].some((tier) => pools[tier].length === 0)) {
     return null // not enough verified content anywhere to complete a puzzle
   }
+  const recentSet = new Set(recentIds)
 
   // Prefer not-yet-mastered categories per tier, but never let a tier go
   // empty just because everything in it happens to be mastered.
@@ -257,8 +309,13 @@ export function assembleSystemPuzzle(bank, system, { mastery = {}, rng = Math.ra
   const ATTEMPTS = 60
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const combo = [pick(biasedPools.easy), pick(biasedPools.medium), pick(biasedPools.hard), pick(biasedPools.expert)]
-    if (!categoriesCompatible(combo)) continue
-    const score = scoreCombo(combo) + combo.reduce((sum, c) => sum + categoryMasteryWeight(c, mastery), 0)
+    if (!comboUsable(combo)) continue
+    // Penalize recently-served categories so the same groups don't reappear
+    // on back-to-back plays, without ever hard-blocking a tier that only has
+    // recently-served content left.
+    const recentPenalty = combo.reduce((sum, c) => sum + (recentSet.has(c.id) ? 2 : 0), 0)
+    const score =
+      scoreCombo(combo) + combo.reduce((sum, c) => sum + categoryMasteryWeight(c, mastery), 0) - recentPenalty
     if (!best || score > best.score) best = { combo, score }
   }
   if (!best) return null
@@ -272,3 +329,7 @@ export function assembleSystemPuzzle(bank, system, { mastery = {}, rng = Math.ra
 }
 
 export { LEVEL_BY_DIFFICULTY, DIFFICULTY_BY_LEVEL, CONNECTION_TYPES, shuffleWith }
+
+// Re-exported names used by Race Mode and tests:
+//   comboUsable, categoriesNearDuplicate, hashStringToSeed, seededRng
+// are declared above with `export`.
