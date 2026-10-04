@@ -3909,3 +3909,10 @@ body.env-challenge .challenge-sod-actions .is-incorrect { color: #f0836a; border
 .led-diag-results { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-dim); }
 .led-diag-results code { font-size: 0.82rem; }
 .led-diag-err { color: var(--difficulty-easy); }
+
+.led-auth { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.led-auth-status { font-size: 0.82rem; color: var(--text-dim); }
+.led-auth-status strong { color: var(--text); }
+.led-auth-form .led-auth-status { margin-right: 2px; }
+.led-auth-input { flex: 0 1 190px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; }
+.led-auth-msg { font-size: 0.8rem; color: var(--difficulty-easy); flex-basis: 100%; }

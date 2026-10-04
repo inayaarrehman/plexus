@@ -3,7 +3,7 @@ import { SYSTEMS } from '../puzzles.js'
 import { CONNECTION_TYPES, DIFFICULTY_TIERS, BANK_STATUS } from '../data/connectionBank.js'
 import * as repo from '../lib/libraryRepo.js'
 import { isSupabaseConfigured } from '../lib/supabaseClient.js'
-import { isAdmin as checkAdmin, getCurrentUser } from '../lib/auth.js'
+import { isAdmin as checkAdmin, getCurrentUser, signInWithPassword, signOut } from '../lib/auth.js'
 
 // ---------------------------------------------------------------------
 // Plexus Editor (internal/admin) — Supabase-backed library management.
@@ -140,6 +140,78 @@ function ConceptForm({ initial, onSave, onCancel, busy }) {
   )
 }
 
+// ---------------------------------------------------------------------
+// Sign-in panel — email + password. Writes to the library require an
+// authenticated admin (enforced by RLS), so this lets an admin sign in from
+// the Editor. Create the admin user in Supabase → Authentication → Users
+// (with "Auto Confirm"), then set profiles.is_admin = true via SQL.
+// ---------------------------------------------------------------------
+function AuthPanel({ signedIn, admin, userEmail, onChanged }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  if (signedIn) {
+    return (
+      <div className="led-auth">
+        <span className="led-auth-status">
+          Signed in as <strong>{userEmail || 'you'}</strong>
+          {admin ? ' · admin ✓' : ' · not an admin yet'}
+        </span>
+        <button
+          className="led-btn"
+          onClick={async () => { await signOut(); onChanged() }}
+        >
+          Sign out
+        </button>
+      </div>
+    )
+  }
+
+  const doSignIn = async () => {
+    setBusy(true)
+    setMsg('')
+    try {
+      const r = await signInWithPassword(email.trim(), password)
+      if (!r.ok) { setMsg(r.error || 'Sign-in failed'); return }
+      setMsg('')
+      setPassword('')
+      onChanged()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="led-auth led-auth-form">
+      <span className="led-auth-status">Sign in to edit</span>
+      <input
+        className="led-auth-input"
+        type="email"
+        placeholder="email"
+        value={email}
+        autoComplete="username"
+        onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && email.trim() && password) doSignIn() }}
+      />
+      <input
+        className="led-auth-input"
+        type="password"
+        placeholder="password"
+        value={password}
+        autoComplete="current-password"
+        onChange={(e) => setPassword(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && email.trim() && password) doSignIn() }}
+      />
+      <button className="led-btn-primary" disabled={busy || !email.trim() || !password} onClick={doSignIn}>
+        {busy ? 'Signing in…' : 'Sign in'}
+      </button>
+      {msg && <span className="led-auth-msg">{msg}</span>}
+    </div>
+  )
+}
+
 export default function LibraryEditor() {
   const [entity, setEntity] = useState('connections') // connections | concepts | sources
   const [rows, setRows] = useState([])
@@ -151,6 +223,7 @@ export default function LibraryEditor() {
   const [busy, setBusy] = useState(false)
   const [admin, setAdmin] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
   const [diag, setDiag] = useState(null)
   const [diagBusy, setDiagBusy] = useState(false)
 
@@ -185,11 +258,17 @@ export default function LibraryEditor() {
     }
   }, [configured, entity, search, statusFilter])
 
-  useEffect(() => {
+  const refreshAuth = useCallback(async () => {
     if (!configured) return
-    getCurrentUser().then((u) => setSignedIn(!!u))
-    checkAdmin().then(setAdmin)
+    const u = await getCurrentUser()
+    setSignedIn(!!u)
+    setUserEmail(u?.email || '')
+    setAdmin(await checkAdmin())
   }, [configured])
+
+  useEffect(() => {
+    refreshAuth()
+  }, [refreshAuth])
 
   useEffect(() => {
     load()
@@ -258,6 +337,13 @@ export default function LibraryEditor() {
           </ul>
         )}
       </div>
+
+      <AuthPanel
+        signedIn={signedIn}
+        admin={admin}
+        userEmail={userEmail}
+        onChanged={async () => { await refreshAuth(); await load() }}
+      />
 
       <div className="led-head">
         <div className="led-entity-tabs">
