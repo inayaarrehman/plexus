@@ -136,7 +136,7 @@ function SystemNode({ system, total, solved, accent, onEnter }) {
       }}
     >
       <span className="system-node-glyph">
-        <Glyph system={system} fraction={fraction} empty={empty} />
+        <Glyph system={system} fraction={fraction} empty={empty} tone="accent" />
       </span>
       <span className="system-node-label">
         <span className="system-node-name">{nameWithBreaks(system)}</span>
@@ -144,7 +144,7 @@ function SystemNode({ system, total, solved, accent, onEnter }) {
           <span className="system-node-soon">Coming soon</span>
         ) : (
           <span className="system-node-count">
-            {solved}<span className="system-node-slash">/</span>{total}
+            {solved} of {total}
           </span>
         )}
       </span>

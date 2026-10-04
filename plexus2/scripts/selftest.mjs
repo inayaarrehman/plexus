@@ -954,6 +954,35 @@ console.log('\n[29] 3-Minute distractors are strongly same-system (NBME-style)')
   assert(total > 0 && same / total >= 0.85, `>=85% of distractors share the anchor's system (got ${Math.round((100 * same) / total)}%)`)
 }
 
+console.log('\n[30] Supabase layer is additive — app runs in local mode when unconfigured')
+{
+  const { isSupabaseConfigured } = await import('../src/lib/supabaseClient.js')
+  assert(isSupabaseConfigured() === false, 'isSupabaseConfigured() is false with no env (→ local fallback)')
+  // Repos import cleanly without statically requiring @supabase/supabase-js.
+  const lib = await import('../src/lib/libraryRepo.js')
+  assert(typeof lib.listConnections === 'function', 'libraryRepo loads without the supabase package installed')
+  const auth = await import('../src/lib/auth.js')
+  assert(typeof auth.signInWithMagicLink === 'function', 'auth loads without the supabase package installed')
+  // Read paths return null when unconfigured (caller falls back to local bank).
+  const conns = await lib.listConnections({})
+  assert(conns === null, 'listConnections() returns null when Supabase is unconfigured')
+}
+
+console.log('\n[31] Daily seed is canonical and deterministic (PLEXUS-YYYY-MM-DD)')
+{
+  const { dailySeedString, buildDailyFromSeed } = await import('../src/utils/dailySeed.js')
+  const seed = dailySeedString('2026-10-03')
+  assert(seed === 'PLEXUS-2026-10-03', `seed string format is canonical (${seed})`)
+  const a = buildDailyFromSeed(connectionBank, seed)
+  const b = buildDailyFromSeed(connectionBank, seed)
+  assert(a && b, 'buildDailyFromSeed produces a puzzle')
+  const sig = (p) => p.categories.map((c) => c.title).join('|')
+  assert(sig(a) === sig(b), 'same seed → identical daily puzzle')
+  const c = buildDailyFromSeed(connectionBank, dailySeedString('2026-10-04'))
+  assert(sig(a) !== sig(c), 'different date seed → different daily puzzle')
+  assert(validatePuzzle(a).length === 0, 'seeded daily passes puzzle validation')
+}
+
 // ---------------------------------------------------------------
 console.log(`\n${'='.repeat(40)}`)
 if (failures === 0) {

@@ -34,6 +34,7 @@ import Archive from '../src/components/Archive.jsx'
 import Systems from '../src/components/Systems.jsx'
 import Challenge from '../src/components/Challenge.jsx'
 import Race from '../src/components/Race.jsx'
+import LibraryEditor from '../src/components/LibraryEditor.jsx'
 import AppNav from '../src/components/AppNav.jsx'
 import DevViewer from '../src/components/DevViewer.jsx'
 import HowToModal from '../src/components/HowToModal.jsx'
@@ -582,6 +583,13 @@ check('Game renders a standard Daily board (Open Board fully removed)', () => {
 // ---------------------------------------------------------------
 // 3-Minute Challenge
 // ---------------------------------------------------------------
+
+check('LibraryEditor shows the offline/setup notice when Supabase is unconfigured', () => {
+  const html = renderToStaticMarkup(React.createElement(LibraryEditor, {}))
+  if (!html.includes('not connected yet')) throw new Error('expected the "Editor is not connected yet" notice')
+  if (!html.includes('VITE_SUPABASE_URL')) throw new Error('expected the env-var setup hint')
+  return html
+})
 
 check('Race renders the entry screen with create/join options', () => {
   const html = renderToStaticMarkup(React.createElement(Race, { bank: connectionBank, onExit: () => {} }))

@@ -741,102 +741,81 @@ body.bg-home .secondary-btn:hover {
 /* §25/§41: fluid 2-up columns capped by the grid width so tiles land near
    ~157px (target 150–155) and never overflow at 375px — the app-shell adds
    18px side padding, so 330px leaves seafoam margins at every phone width. */
+/* 2-up on mobile, 3/4 on wider screens. Capped and centred; the cards sit
+   on the seafoam env with generous breathing room between them. */
 .system-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 16px;
-  max-width: 330px;
+  gap: 20px 18px;
+  max-width: 340px;
   margin: 0 auto;
   padding-bottom: 8px;
 }
 
-/* §24-28/§43: the tile itself IS the button — a compact Plexus tile, shorter
-   and flatter than before. Enough colour + depth to stay tactile, but not a
-   floating glossy app icon and not a flat SaaS card. The anatomical glyph is
-   the star; name + count sit tight beneath it. */
+/* Flatter, lighter, editorial card: a soft system-tinted surface (not a
+   saturated full-colour button) with a hairline accent border and no heavy
+   shadow — the node-organ illustration carries the system colour. Shorter and
+   quieter than the old tactile tile, so it reads as a knowledge-graph entry
+   rather than a dashboard button. */
 .system-node {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  aspect-ratio: 1.32 / 1; /* shorter tile; the cropped glyph keeps presence (§7) */
-  padding: 7px 10px 8px;
-  border: none;
+  gap: 3px;
+  aspect-ratio: 1.58 / 1; /* ~16-18% shorter than the previous tile */
+  padding: 8px 10px 9px;
   cursor: pointer;
-  color: #fff;
-  border-radius: 22px; /* §26: soft Plexus tile, not an iOS icon */
-  /* §9: gradient flattened another ~15-20% — a barely-there lighter top into a
-     slightly deeper lower edge. No big highlight, no plastic/glass. */
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--node-accent) 95%, white) 0%,
-      var(--node-accent) 60%,
-      color-mix(in srgb, var(--node-accent) 95%, black) 100%
-    );
-  /* §9: depth reduced again — a tight low contact shadow and a hairline top
-     highlight. Slightly raised, not floating; most tactility comes from press. */
-  box-shadow:
-    0 1px 0 color-mix(in srgb, white 28%, transparent) inset,
-    0 -2px 5px color-mix(in srgb, black 8%, transparent) inset,
-    0 1px 3px -1px rgba(0, 0, 0, 0.14);
-  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--text);
+  --system-card-base: color-mix(in srgb, var(--bg-systems) 45%, white);
+  border-radius: 14px; /* reduced corner radius — less app-icon, more card */
+  /* Pale, clean system-specific wash: the accent tinted into a lightened
+     seafoam base, so warm accents (coral) read as a soft blush rather than
+     muddying against the green environment. */
+  background: color-mix(in srgb, var(--node-accent) 12%, var(--system-card-base));
+  border: 1px solid color-mix(in srgb, var(--node-accent) 26%, transparent);
+  box-shadow: none;
+  transition: background 150ms ease, border-color 150ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-/* §29: restrained press — sink ~1.5px, ease to 0.98, tighten the contact
-   shadow. No bounce, overshoot or wobble. */
+/* Restrained press: a slight settle and a touch deeper wash — no shadow play. */
 .system-node.is-pressed {
-  transform: translateY(1.5px) scale(0.98);
-  box-shadow:
-    0 1px 0 color-mix(in srgb, white 28%, transparent) inset,
-    0 -2px 5px color-mix(in srgb, black 12%, transparent) inset,
-    0 1px 2px -1px rgba(0, 0, 0, 0.18);
+  transform: translateY(1px) scale(0.985);
+  background: color-mix(in srgb, var(--node-accent) 20%, var(--system-card-base));
+  border-color: color-mix(in srgb, var(--node-accent) 40%, transparent);
 }
 
 .system-node:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--node-accent) 55%, var(--text));
-  outline-offset: 3px;
+  outline: 2.5px solid color-mix(in srgb, var(--node-accent) 55%, var(--text));
+  outline-offset: 2px;
 }
 
-/* §26 completion: a touch more tonal richness — no gold, trophy or badge. */
+/* Completion: a slightly richer wash and firmer border — the resolved network
+   carries the reward, no gold/trophy/badge. */
 .system-node.is-complete {
-  box-shadow:
-    0 1px 0 color-mix(in srgb, white 42%, transparent) inset,
-    0 -3px 7px color-mix(in srgb, black 9%, transparent) inset,
-    0 2px 5px -2px color-mix(in srgb, var(--node-accent) 45%, transparent),
-    0 2px 4px -2px rgba(0, 0, 0, 0.16);
+  background: color-mix(in srgb, var(--node-accent) 19%, var(--system-card-base));
+  border-color: color-mix(in srgb, var(--node-accent) 42%, transparent);
 }
 
-/* §35: Coming Soon = an unformed branch, not a locked/disabled tile. Pale,
-   desaturated, faint full glyph, muted label — no padlock, red or overlay. */
+/* Coming Soon: an even paler, unformed branch — no padlock, red or overlay. */
 .system-node.is-empty {
   cursor: default;
-  color: color-mix(in srgb, var(--text) 60%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--node-accent) 18%, var(--bg-systems)) 0%,
-      color-mix(in srgb, var(--node-accent) 11%, var(--bg-systems)) 100%
-    );
-  box-shadow:
-    0 1px 0 color-mix(in srgb, white 24%, transparent) inset,
-    0 1px 3px -1px rgba(0, 0, 0, 0.09);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  background: color-mix(in srgb, var(--node-accent) 5%, var(--system-card-base));
+  border-color: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
-/* §30: the anatomical Plexus glyph is the STAR — sized to ~half the tile's
-   visual area. The full network is always faintly visible; resolved parts
-   are stronger and slightly larger, so it "comes alive" with real progress. */
+/* The anatomical Plexus glyph, in the system colour — the main visual of the
+   card. The full network is always faintly visible; resolved parts strengthen
+   with real progress. */
 .system-node-glyph {
   width: 100%;
-  max-width: 118px;
-  aspect-ratio: 1.6 / 1; /* modest box height; cropped viewBox makes the
-                             network fill it, so the glyph reads large (§8)
-                             without making the tile taller. */
+  max-width: 108px;
+  aspect-ratio: 1.85 / 1; /* modest height keeps the card short; the cropped
+                             viewBox keeps the network legible. */
   margin-top: 1px;
 }
 
@@ -889,17 +868,19 @@ body.bg-home .secondary-btn:hover {
   stroke: #fff;
 }
 
-/* tone-accent: accent-inked network on the seafoam detail page. */
+/* tone-accent: accent-inked network — on the pale system cards and the detail
+   page. Unresolved parts are soft but clearly visible against the pale wash;
+   resolved parts are full system colour. */
 .tone-accent .glyph-link {
-  stroke: color-mix(in srgb, var(--node-accent) 32%, transparent);
+  stroke: color-mix(in srgb, var(--node-accent) 42%, transparent);
 }
 .tone-accent .glyph-link.is-on {
   stroke: var(--node-accent);
   stroke-width: 3;
 }
 .tone-accent .glyph-node {
-  fill: color-mix(in srgb, var(--node-accent) 26%, transparent);
-  stroke: color-mix(in srgb, var(--node-accent) 45%, transparent);
+  fill: color-mix(in srgb, var(--node-accent) 34%, transparent);
+  stroke: color-mix(in srgb, var(--node-accent) 52%, transparent);
 }
 .tone-accent .glyph-node.is-on {
   fill: var(--node-accent);
@@ -915,7 +896,7 @@ body.bg-home .secondary-btn:hover {
   stroke: color-mix(in srgb, var(--text) 30%, transparent);
 }
 
-/* §31: name + count are one tight composition beneath the glyph. */
+/* Name + count: one tight composition beneath the glyph. */
 .system-node-label {
   display: flex;
   flex-direction: column;
@@ -923,33 +904,30 @@ body.bg-home .secondary-btn:hover {
   gap: 1px;
 }
 
-/* §13: readable names, graceful two-line wrapping for long labels, no
-   universal shrink. */
+/* Cleaner, slightly smaller system name in Plexus Ink. */
 .system-node-name {
-  font-weight: 700;
-  font-size: 0.92rem;
-  line-height: 1.1;
+  font-weight: 600;
+  font-size: 0.86rem;
+  line-height: 1.12;
+  letter-spacing: -0.005em;
   text-align: center;
+  color: var(--text);
   overflow-wrap: break-word;
   text-wrap: balance;
 }
 
+/* Progress as a quiet caption ("0 of 23"), not a prominent second line. */
 .system-node-count {
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, white 85%, transparent);
-}
-
-.system-node-slash {
-  opacity: 0.55;
-  margin: 0 1px;
+  color: var(--text-dim);
 }
 
 .system-node-soon {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--text) 50%, transparent);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--text) 48%, transparent);
 }
 
 /* §16: system-entry transition — the tapped accent washes outward, then the
@@ -3885,3 +3863,49 @@ body.env-challenge .challenge-sod-actions .is-incorrect { color: #f0836a; border
   gap: 10px;
   margin-top: 22px;
 }
+
+/* ---------- Plexus Editor (internal #dev) ---------- */
+.led { display: flex; flex-direction: column; gap: 12px; }
+.led-notice {
+  padding: 16px; border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+.led-notice p { color: var(--text-dim); font-size: 0.9rem; margin: 6px 0 0; }
+.led-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.led-entity-tabs { display: flex; gap: 6px; }
+.led-tab { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-dim); font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.led-tab.active { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.led-admin { font-size: 0.78rem; color: var(--text-dim); }
+.led-admin.is-admin { color: var(--difficulty-medium); font-weight: 600; }
+.led-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.led-search { flex: 1 1 160px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.led-controls select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.led-btn, .led-btn-primary { padding: 8px 12px; border-radius: 8px; font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.led-btn { border: 1px solid var(--border); background: transparent; color: var(--text); }
+.led-btn-primary { border: none; background: var(--text); color: var(--bg); }
+.led-btn-primary:disabled { opacity: 0.5; cursor: default; }
+.led-error { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--difficulty-easy) 14%, var(--bg)); color: var(--difficulty-easy); font-size: 0.85rem; }
+.led-muted { color: var(--text-dim); font-size: 0.88rem; }
+.led-editor-panel { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 4%, var(--bg)); }
+.led-panel-title { font-size: 1rem; font-weight: 700; margin: 0 0 10px; }
+.led-form { display: flex; flex-direction: column; gap: 10px; }
+.led-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.led-row .led-field { flex: 1 1 120px; }
+.led-field { display: flex; flex-direction: column; gap: 3px; }
+.led-label { font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+.led-field input, .led-field select, .led-field textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.led-actions { display: flex; gap: 8px; margin-top: 4px; }
+.led-list { display: flex; flex-direction: column; }
+.led-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.led-item.is-archived { opacity: 0.55; }
+.led-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.led-item-title { font-weight: 600; font-size: 0.92rem; }
+.led-item-meta { font-size: 0.76rem; color: var(--text-dim); }
+.led-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Plexus Editor — connection diagnostic */
+.led-diagnostic { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.led-diag-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.led-diag-results { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-dim); }
+.led-diag-results code { font-size: 0.82rem; }
+.led-diag-err { color: var(--difficulty-easy); }

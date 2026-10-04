@@ -9,6 +9,8 @@ import { curateDailyCandidates } from '../utils/dailyCuration.js'
 import { getPlexusCandidates } from '../utils/threads.js'
 import { assessModes } from '../utils/challengeEngine.js'
 import { shuffleWith, makeRng } from '../utils/puzzleAssembler.js'
+import LibraryEditor from './LibraryEditor.jsx'
+import { isSupabaseConfigured } from '../lib/supabaseClient.js'
 
 const levelColor = (level) => DIFFICULTY.find((d) => d.level === level)?.color || '#888'
 
@@ -351,7 +353,7 @@ function DailyPreview() {
 }
 
 export default function DevViewer() {
-  const [tab, setTab] = useState('puzzles') // 'puzzles' | 'bank' | 'daily'
+  const [tab, setTab] = useState('puzzles') // 'puzzles' | 'bank' | 'daily' | 'editor'
 
   const [selectedId, setSelectedId] = useState(null)
   const [jsonInput, setJsonInput] = useState('')
@@ -426,7 +428,12 @@ export default function DevViewer() {
         <button className={`dev-tab ${tab === 'daily' ? 'active' : ''}`} onClick={() => setTab('daily')}>
           Daily Preview
         </button>
+        <button className={`dev-tab ${tab === 'editor' ? 'active' : ''}`} onClick={() => setTab('editor')}>
+          Editor {isSupabaseConfigured() ? '(Supabase)' : '(offline)'}
+        </button>
       </div>
+
+      {tab === 'editor' && <LibraryEditor />}
 
       {tab === 'daily' && <DailyPreview />}
 
